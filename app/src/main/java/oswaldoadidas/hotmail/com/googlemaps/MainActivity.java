@@ -1,12 +1,28 @@
 package oswaldoadidas.hotmail.com.googlemaps;
 
 import android.app.Dialog;
-import android.support.v7.app.AppCompatActivity;
+import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
+import android.support.v4.app.ActivityCompat;
+import android.support.v7.app.AppCompatActivity;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -14,19 +30,24 @@ import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
 
-public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
+import java.io.IOException;
+import java.util.List;
+
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     GoogleMap mgoogleMap;
+    GoogleApiClient mgoogleApiClient;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if(googleServicesAvailable()){
-            Toast.makeText(this,"Se logró",Toast.LENGTH_SHORT).show();
+        if (googleServicesAvailable()) {
+            Toast.makeText(this, "Se logró", Toast.LENGTH_SHORT).show();
             setContentView(R.layout.activity_main);
             iniciarMapa();
-        }else{
+        } else {
 
         }
 
@@ -37,18 +58,18 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mapFragment.getMapAsync(this);
     }
 
-    public boolean googleServicesAvailable(){
+    public boolean googleServicesAvailable() {
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
         int estaDisponible = apiAvailability.isGooglePlayServicesAvailable(this);
-        if(estaDisponible == ConnectionResult.SUCCESS){
+        if (estaDisponible == ConnectionResult.SUCCESS) {
             return true;
 
-        }else if(apiAvailability.isUserResolvableError(estaDisponible)){
-            Dialog dialog = apiAvailability.getErrorDialog(this,estaDisponible,0);
+        } else if (apiAvailability.isUserResolvableError(estaDisponible)) {
+            Dialog dialog = apiAvailability.getErrorDialog(this, estaDisponible, 0);
             dialog.show();
 
-        }else{
-            Toast.makeText(this, "No se puede conectar",Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "No se puede conectar", Toast.LENGTH_SHORT).show();
         }
         return false;
     }
@@ -56,19 +77,145 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mgoogleMap = googleMap;
-        irLocalizadorZoom(19.390726,-99.1220992,15);
+        //irLocalizadorZoom(19.390726,-99.1220992,15);
+
+
+        /*
+       if(Build.VERSION.SDK_INT>= Build.VERSION_CODES.M){
+
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+       }
+        mgoogleMap.setMyLocationEnabled(true);
+        */
+
+        mgoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .build();
+        mgoogleApiClient.connect();
+
+
     }
 
     private void irLocalizador(double latitud, double longitd) {
-        LatLng latLng = new LatLng(latitud,longitd);
+        LatLng latLng = new LatLng(latitud, longitd);
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(latLng);
         mgoogleMap.moveCamera(cameraUpdate);
     }
 
-    private void irLocalizadorZoom(double latitud, double longitd,float zoom) {
-        LatLng latLng = new LatLng(latitud,longitd);
-        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng,zoom);
+    private void irLocalizadorZoom(double latitud, double longitd, float zoom) {
+        LatLng latLng = new LatLng(latitud, longitd);
+        CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, zoom);
         mgoogleMap.moveCamera(cameraUpdate);
     }
 
+    public void Aller(View view) throws IOException {
+        EditText editText = (EditText) findViewById(R.id.editText);
+        String localizacion = editText.getText().toString();
+
+        Geocoder geocoder = new Geocoder(this);
+        List<Address> lista = geocoder.getFromLocationName(localizacion, 1);
+        Address address = lista.get(0);
+        String localidad = address.getLocality();
+
+        Toast.makeText(this, localidad, Toast.LENGTH_SHORT).show();
+
+        double latitud = address.getLatitude();
+        double longitud = address.getLongitude();
+        irLocalizadorZoom(latitud, longitud, 15);
+
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu, menu);
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.mapTypeNone:
+                mgoogleMap.setMapType(GoogleMap.MAP_TYPE_NONE);
+                break;
+            case R.id.mapTypeNormal:
+                mgoogleMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
+                break;
+            case R.id.mapTypeSatellite:
+                mgoogleMap.setMapType(GoogleMap.MAP_TYPE_SATELLITE);
+                break;
+            case R.id.mapTypeTerrain:
+                mgoogleMap.setMapType(GoogleMap.MAP_TYPE_TERRAIN);
+                break;
+            case R.id.mapTypeHybrid:
+                mgoogleMap.setMapType(GoogleMap.MAP_TYPE_HYBRID);
+                break;
+            default:
+                break;
+
+        }
+        return super.onOptionsItemSelected(item);
+
+    }
+
+    LocationRequest locationRequest;
+
+    @Override
+    public void onConnected(@Nullable Bundle bundle) {
+        locationRequest = LocationRequest.create();
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        locationRequest.setInterval(1000);
+
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+
+
+        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        }
+        //LocationServices.FusedLocationApi.requestLocationUpdates(mgoogleApiClient, locationRequest, this);
+          LocationServices.FusedLocationApi.requestLocationUpdates(mgoogleApiClient,locationRequest,this);
+
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        if(location == null){
+            Toast.makeText(this,"No se puede dar localidad actual",Toast.LENGTH_LONG).show();
+
+        }else{
+            LatLng ll = new LatLng(location.getLatitude(),location.getLongitude());
+            CameraUpdate update = CameraUpdateFactory.newLatLngZoom(ll,15);
+            mgoogleMap.animateCamera(update);
+        }
+
+    }
 }
