@@ -15,6 +15,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -28,7 +29,10 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 
 import java.io.IOException;
 import java.util.List;
@@ -77,7 +81,65 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mgoogleMap = googleMap;
-        //irLocalizadorZoom(19.390726,-99.1220992,15);
+
+        if(mgoogleMap !=null){
+
+
+            mgoogleMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+                @Override
+                public void onMarkerDragStart(Marker marker) {
+
+                }
+
+                @Override
+                public void onMarkerDrag(Marker marker) {
+
+                }
+
+                @Override
+                public void onMarkerDragEnd(Marker marker) {
+                    Geocoder geocoder = new Geocoder(MainActivity.this);
+                    LatLng latLng = marker.getPosition();
+                    double lat = latLng.latitude;
+                    double lg = latLng.longitude;
+                    List<Address> list = null;
+                    try {
+                        list = geocoder.getFromLocation(lat,lg,1);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    Address address = list.get(0);
+                    marker.setTitle(address.getLocality());
+                    marker.showInfoWindow();
+
+                }
+            });
+
+            mgoogleMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
+                @Override
+                public View getInfoWindow(Marker marker) {
+                    return null;
+                }
+
+                @Override
+                public View getInfoContents(Marker marker) {
+                    View v = getLayoutInflater().inflate(R.layout.info_window,null);
+                    TextView tvLocality = (TextView)v.findViewById(R.id.tv_locality);
+                    TextView tvLat = (TextView)v.findViewById(R.id.tv_lat);
+                    TextView tvLng = (TextView)v.findViewById(R.id.tv_lng);
+                    TextView tvSnippet = (TextView)v.findViewById(R.id.tv_snippet);
+
+                    LatLng latLng = marker.getPosition();
+                    tvLocality.setText(marker.getTitle());
+                    tvLat.setText("Latitud: "+latLng.latitude);
+                    tvLng.setText("Longitud: "+latLng.longitude);
+                    tvSnippet.setText(marker.getSnippet());
+                    return v;
+                }
+            });
+
+        }
+        irLocalizadorZoom(19.390726,-99.1220992,15);
 
 
         /*
@@ -98,12 +160,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mgoogleMap.setMyLocationEnabled(true);
         */
 
+
+        /*
         mgoogleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
                 .addOnConnectionFailedListener(this)
                 .build();
         mgoogleApiClient.connect();
+    */
 
 
     }
@@ -112,6 +177,8 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         LatLng latLng = new LatLng(latitud, longitd);
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLng(latLng);
         mgoogleMap.moveCamera(cameraUpdate);
+
+
     }
 
     private void irLocalizadorZoom(double latitud, double longitd, float zoom) {
@@ -119,6 +186,10 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         CameraUpdate cameraUpdate = CameraUpdateFactory.newLatLngZoom(latLng, zoom);
         mgoogleMap.moveCamera(cameraUpdate);
     }
+
+    Marker marker;
+
+
 
     public void Aller(View view) throws IOException {
         EditText editText = (EditText) findViewById(R.id.editText);
@@ -135,6 +206,23 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         double longitud = address.getLongitude();
         irLocalizadorZoom(latitud, longitud, 15);
 
+        setMarker(localidad, latitud, longitud);
+
+    }
+
+    private void setMarker(String localidad, double latitud, double longitud) {
+        if(marker!=null){
+            marker.remove();
+        }
+
+        MarkerOptions options = new MarkerOptions()
+                .title(localidad)
+                .draggable(true)
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
+                //.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_sipply))
+                .position(new LatLng(latitud,longitud))
+                .snippet("Salut tout le monde");
+        marker = mgoogleMap.addMarker(options);
     }
 
     @Override
