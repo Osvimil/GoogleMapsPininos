@@ -2,6 +2,7 @@ package oswaldoadidas.hotmail.com.googlemaps;
 
 import android.app.Dialog;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -33,8 +34,11 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
@@ -83,6 +87,15 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         mgoogleMap = googleMap;
 
         if(mgoogleMap !=null){
+
+            mgoogleMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+                @Override
+                public void onMapLongClick(LatLng latLng) {
+                    MainActivity.this.setMarker("Local ",latLng.latitude,latLng.longitude);
+
+
+                }
+            });
 
 
             mgoogleMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
@@ -210,10 +223,30 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     }
 
+    //Circle circle;
+
+
+    /*Marker marker1;
+    Marker marker2;
+    Polyline line;*/
+
+    ArrayList<Marker> markers = new ArrayList<Marker>();
+    static  final int POLYGON_POINTS = 5;
+    Polygon shape;
+
+
     private void setMarker(String localidad, double latitud, double longitud) {
+        /*
         if(marker!=null){
-            marker.remove();
+            removeEverything();
+        }*/
+
+        if(markers.size() == POLYGON_POINTS){
+            removeEverything();
+
+
         }
+
 
         MarkerOptions options = new MarkerOptions()
                 .title(localidad)
@@ -222,8 +255,88 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 //.icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_sipply))
                 .position(new LatLng(latitud,longitud))
                 .snippet("Salut tout le monde");
-        marker = mgoogleMap.addMarker(options);
+
+        markers.add(mgoogleMap.addMarker(options));
+
+        if(markers.size() == POLYGON_POINTS){
+            drawPolygon();
+
+        }
+
+        /*if(marker1 == null){
+            marker1 = mgoogleMap.addMarker(options);
+        }else if(marker2 == null){
+            marker2 = mgoogleMap.addMarker(options);
+            drawLine();
+
+        }else{
+            removeEverything();
+            marker1 = mgoogleMap.addMarker(options);
+        }*/
+
+
+        //circle = drawCircle(new LatLng(latitud,longitud));
     }
+
+    private void drawPolygon() {
+
+        PolygonOptions options = new PolygonOptions()
+                .fillColor(0x33FF0000)
+                .strokeWidth(3)
+                .strokeColor(Color.BLUE);
+
+        for(int i=0; i<POLYGON_POINTS; i++){
+            options.add(markers.get(i).getPosition());
+
+        }
+        shape = mgoogleMap.addPolygon(options);
+
+
+    }
+
+    private void removeEverything() {
+        for(Marker marker: markers){
+            marker.remove();
+
+        }
+        markers.clear();
+        shape.remove();
+        shape = null;
+
+    }
+
+    /*private void drawLine() {
+        PolylineOptions options = new PolylineOptions()
+                .add(marker1.getPosition())
+                .add(marker2.getPosition())
+                .color(Color.BLUE)
+                .width(3);
+        line = mgoogleMap.addPolyline(options);
+    }*/
+
+    /*
+    private Circle drawCircle(LatLng latLng){
+
+        CircleOptions options = new CircleOptions()
+                .center(latLng)
+                .radius(1000)
+                .fillColor(0x33FF0000)
+                .strokeColor(Color.CYAN)
+                .strokeWidth(3);
+        return mgoogleMap.addCircle(options);
+    }
+    */
+
+    /*private void removeEverything(){
+        marker1.remove();
+        marker1 = null;
+        marker2.remove();
+        marker2 = null;
+        line.remove();
+        //circle.remove();
+        //circle = null;
+
+    }*/
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
